@@ -38,7 +38,7 @@ fn model(app: &App) -> Model {
         field_lines: false
     };
 
-    for _ in 0..10 {
+    for _ in 0..3 {
         model.bodies.push(Box::new(PointCharge {
             charge: rng.gen_range(-100.0..100.0),
             mass: 1.,
@@ -46,19 +46,18 @@ fn model(app: &App) -> Model {
                 rng.gen_range(screen.left()..screen.right()),
                 rng.gen_range(screen.bottom()..screen.top())
             ),
-            vel: Vec2::new(0., 0.)
+            vel: Vec2::ZERO
         }));
 
-        /*model.bodies.push(Box::new(Dipole {
-            dipole: 10.,
-            inertia: 1.,
-            pos: Vec2::new(
+        model.bodies.push(Box::new(Dipole::new(
+            10.,
+            1.,
+            Vec2::new(
                 rng.gen_range(screen.left()..screen.right()),
                 rng.gen_range(screen.bottom()..screen.top())
             ),
-            angle: 0.,
-            ang_vel: 0.
-        }));*/
+            Vec2::ZERO
+        )));
     }
 
     model

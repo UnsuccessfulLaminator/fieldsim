@@ -70,11 +70,29 @@ impl Body for PointCharge {
 
 
 pub struct Dipole {
-    pub dipole: f32,
-    pub inertia: f32,
-    pub pos: Vec2,
-    pub angle: f32,
-    pub ang_vel: f32,
+    q1: PointCharge,
+    q2: PointCharge,
+    pos: Vec2,
+}
+
+impl Dipole {
+    pub fn new(dipole: f32, mass: f32, pos: Vec2, vel: Vec2) -> Dipole {
+        Dipole {
+            q1: PointCharge {
+                charge: dipole,
+                mass: mass/2.,
+                pos: pos+Vec2::new(0.5, 0.),
+                vel: vel
+            },
+            q2: PointCharge {
+                charge: -dipole,
+                mass: mass/2.,
+                pos: pos-Vec2::new(0.5, 0.),
+                vel: vel
+            },
+            pos: pos
+        }
+    }
 }
 
 impl Body for Dipole {
@@ -83,33 +101,20 @@ impl Body for Dipole {
     }
 
     fn e_field(&self, pos: Vec2) -> Vec2 {
-        let r = pos-self.pos;
-        let r_mag = r.length();
-        let r_unit = r/r_mag;
-        let p = self.dipole*Vec2::new(self.angle.cos(), self.angle.sin());
-
-        (3.*p.dot(r_unit)*r_unit-self.dipole)/r_mag.powi(3)
+        self.q1.e_field(pos)+self.q2.e_field(pos)
     }
 
     fn potential(&self, pos: Vec2) -> f32 {
-        let r = pos-self.pos;
-        let p = self.dipole*Vec2::new(self.angle.cos(), self.angle.sin());
-
-        p.dot(r)/r.length().powi(3)
+        self.q1.potential(pos)+self.q2.potential(pos)
     }
 
     fn update(&mut self, e_field: Vec2, dt: f32) {
-        let p = self.dipole*Vec2::new(self.angle.cos(), self.angle.sin());
-        let torque = p.perp_dot(e_field);
-        let dw = torque*dt;
-
-        self.angle += (self.ang_vel+0.5*dw)*dt;
-        self.ang_vel += dw;
+        ; // todo
     }
 
     fn draw(&self, draw: &Draw) {
-        let r = (1.-(-self.dipole).exp())*5.;
-        let forward = r*Vec2::new(self.angle.cos(), self.angle.sin());
+        let r = (1.-(-self.q1.charge).exp())*5.;
+        let forward = r*(self.q1.pos-self.pos)*2.;
         let side = forward.perp()/2.;
         
         draw.tri()
