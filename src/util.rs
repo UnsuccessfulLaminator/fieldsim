@@ -13,10 +13,25 @@ enum AdaptStep {
 pub fn isopotential_points(
     body: &impl Body,
     r0: Vec2,
-    max_dl: f32,
     min_dl: f32,
+    max_dl: f32,
     max_err: f32,
     max_steps: usize
+) -> Vec<Vec2> {
+    let f = |r| body.e_field(r).normalize().perp();
+    let stop = |r: Vec2, dl| (r-r0).length() < dl/2.;
+    
+    rk4_2d(f, r0, min_dl, max_dl, max_err, max_steps, stop)
+}
+
+fn rk4_2d(
+    f: impl Fn(Vec2) -> Vec2,
+    r0: Vec2,
+    min_dl: f32,
+    max_dl: f32,
+    max_err: f32,
+    max_steps: usize,
+    stop: impl Fn(Vec2, f32) -> bool
 ) -> Vec<Vec2> {
     let mut points = Vec::new();
     let mut r = r0;
@@ -27,10 +42,10 @@ pub fn isopotential_points(
         let mut adapt = AdaptStep::NoChange;
 
         loop {
-            k1 = body.e_field(r).normalize().perp();
-            k2 = body.e_field(r+k1*0.5*dl).normalize().perp();
-            k3 = body.e_field(r+k2*0.5*dl).normalize().perp();
-            k4 = body.e_field(r+k3*dl).normalize().perp();
+            k1 = f(r);
+            k2 = f(r+k1*0.5*dl);
+            k3 = f(r+k2*0.5*dl);
+            k4 = f(r+k3*dl);
             let err = (k1-4.*k2+2.*k3+k4).length()/6.;
             
             if err >= max_err {
@@ -51,10 +66,11 @@ pub fn isopotential_points(
         }
         
         r += (k1+2.*(k2+k3)+k4)*dl/6.;
+
+        if r.is_finite() { points.push(r); }
+        else { break; }
         
-        points.insert(0, r);
-        
-        if (r-r0).length() < dl/2. { break; }
+        if stop(r, dl) { break; }
     }
 
     points
@@ -73,34 +89,20 @@ pub fn isopotential_points(
 pub fn field_line_points(
     body: &impl Body,
     r0: Vec2,
-    dl: f32,
+    min_dl: f32,
+    max_dl: f32,
+    max_err: f32,
     max_steps: usize
 ) -> Vec<Vec2> {
-    let mut points = Vec::new();
-    let mut r = r0;
-
-    for _ in 0..max_steps {
-        let e_field = body.e_field(r);
-        let midpoint = r+e_field.normalize()*0.5*dl;
-        let e_field_mid = body.e_field(midpoint);
-        let r_next = r+e_field_mid.normalize()*dl;
-        
-        r = r_next;
-        points.insert(0, r);
-    }
+    let f_forward = |r| body.e_field(r).normalize();
+    let f_backward = |r| -body.e_field(r).normalize();
+    let stop = |r, _dl| body.potential(r).abs() > 5e3;
+    let mut points = rk4_2d(f_forward, r0, min_dl, max_dl, max_err, max_steps, stop);
+    let backward_points = rk4_2d(f_backward, r0, min_dl, max_dl, max_err, max_steps, stop);
     
-    r = r0;
-    points.push(r);
-    
-    for _ in 0..max_steps {
-        let e_field = body.e_field(r);
-        let midpoint = r-e_field.normalize()*0.5*dl;
-        let e_field_mid = body.e_field(midpoint);
-        let r_next = r-e_field_mid.normalize()*dl;
-        
-        r = r_next;
-        points.push(r);
-    }
+    points.reverse();
+    points.push(r0);
+    points.extend(backward_points.into_iter());
 
     points
 }

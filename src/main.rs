@@ -107,7 +107,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     if let Some(trace_origin) = model.trace_origin {
         let points = util::isopotential_points(
             &model.bodies, trace_origin,
-            5., 5e-3, 1e-3, 1000
+            5e-3, 5., 1e-3, 1000
         );
         
         draw.polyline()
@@ -139,7 +139,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
             }
             
             for origin in field_line_origins {
-                let points = util::field_line_points(&model.bodies, origin, 5., 1000);
+                let points = util::field_line_points(
+                    &model.bodies, origin,
+                    5e-3, 5., 1e-3, 1000
+                );
 
                 draw.polyline()
                     .points(points.into_iter())
