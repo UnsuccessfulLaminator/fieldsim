@@ -115,9 +115,31 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .color(WHITE);
 
         if model.field_lines {
-            for i in 0..points.len()/5 {
-                let point = points[i*5];
-                let points = util::field_line_points(&model.bodies, point, 5., 10., 1000);
+            let fields: Vec<f32> = points.iter()
+                                         .map(|r| model.bodies.e_field(*r).length())
+                                         .collect();
+            let flux_step = 10.;
+            let mut flux = 0.;
+            let mut field_line_origins = Vec::new();
+
+            for i in 0..points.len() {
+                let i_next = (i+1)%points.len();
+                let dist = (points[i]-points[i_next]).length();
+                let avg_field_strength = (fields[i]+fields[i_next])/2.;
+                let flux_to_next = dist*avg_field_strength;
+                
+                flux += flux_to_next;
+
+                if flux > flux_step {
+                    flux -= flux_step;
+                    let frac = 1.-flux/flux_to_next;
+
+                    field_line_origins.push(points[i].lerp(points[i_next], frac));
+                }
+            }
+            
+            for origin in field_line_origins {
+                let points = util::field_line_points(&model.bodies, origin, 5., 1000);
 
                 draw.polyline()
                     .points(points.into_iter())

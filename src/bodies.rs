@@ -29,11 +29,11 @@ impl Body for PointCharge {
     fn e_field(&self, pos: Vec2) -> Vec2 {
         let r = pos-self.pos;
         
-        r*self.charge/r.length().powi(3)
+        r*self.charge/r.length_squared()
     }
 
     fn potential(&self, pos: Vec2) -> f32 {
-        self.charge/(pos-self.pos).length()
+        -self.charge*(pos-self.pos).length().ln()
     }
 
     fn update(&mut self, e_field: Vec2, dt: f32) {

@@ -66,7 +66,6 @@ pub fn isopotential_points(
 //     bodies    - electric bodies producing the field lines
 //     r0        - initial point
 //     dl        - length step size between points
-//     max_v     - line terminates where the potential magnitude exceeds this
 //     max_steps - line must terminate within this many steps of the start
 // Returns:
 //     A vector of points tracing out the field line, from lowest potential to
@@ -75,7 +74,6 @@ pub fn field_line_points(
     body: &impl Body,
     r0: Vec2,
     dl: f32,
-    max_v: f32,
     max_steps: usize
 ) -> Vec<Vec2> {
     let mut points = Vec::new();
@@ -86,9 +84,6 @@ pub fn field_line_points(
         let midpoint = r+e_field.normalize()*0.5*dl;
         let e_field_mid = body.e_field(midpoint);
         let r_next = r+e_field_mid.normalize()*dl;
-        let v_next = body.potential(r_next);
-        
-        if v_next.abs() > max_v { break; }
         
         r = r_next;
         points.insert(0, r);
@@ -102,9 +97,6 @@ pub fn field_line_points(
         let midpoint = r-e_field.normalize()*0.5*dl;
         let e_field_mid = body.e_field(midpoint);
         let r_next = r-e_field_mid.normalize()*dl;
-        let v_next = body.potential(r_next);
-        
-        if v_next.abs() > max_v { break; }
         
         r = r_next;
         points.push(r);
