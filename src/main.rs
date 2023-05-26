@@ -17,8 +17,8 @@ fn main() {
 struct Model {
     running: bool,
     bodies: Vec<Box<dyn Body>>,
-    trace_origin: Option<Vec2>,
-    field_lines: bool
+    isopotentials: Vec<Vec<Vec2>>,
+    field_lines: Vec<Vec<Vec2>>
 }
 
 fn model(app: &App) -> Model {
@@ -34,11 +34,11 @@ fn model(app: &App) -> Model {
     let mut model = Model {
         running: false,
         bodies: Vec::new(),
-        trace_origin: None,
-        field_lines: false
+        isopotentials: Vec::new(),
+        field_lines: Vec::new()
     };
 
-    for _ in 0..3 {
+    for _ in 0..10 {
         model.bodies.push(Box::new(PointCharge {
             charge: rng.gen_range(-100.0..100.0),
             mass: 1.,
@@ -49,7 +49,7 @@ fn model(app: &App) -> Model {
             vel: Vec2::ZERO
         }));
 
-        model.bodies.push(Box::new(Dipole::new(
+        /*model.bodies.push(Box::new(Dipole::new(
             10.,
             1.,
             Vec2::new(
@@ -57,7 +57,7 @@ fn model(app: &App) -> Model {
                 rng.gen_range(screen.bottom()..screen.top())
             ),
             Vec2::ZERO
-        )));
+        )));*/
     }
 
     model
@@ -66,7 +66,22 @@ fn model(app: &App) -> Model {
 fn key_pressed(_app: &App, model: &mut Model, key: Key) {
     match key {
         Key::Space => model.running = !model.running,
-        Key::F => model.field_lines = !model.field_lines,
+        Key::F => {
+            model.field_lines.clear();
+
+            for isopotential in &model.isopotentials {
+                let origins = util::divide_isopotential(&model.bodies, isopotential, 10.);
+                
+                for origin in origins {
+                    let points = util::field_line_points(
+                        &model.bodies, origin,
+                        5e-3, 5., 1e-3, 1000
+                    );
+
+                    model.field_lines.push(points);
+                }
+            }
+        }
         _ => {}
     }
 }
@@ -75,8 +90,20 @@ fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
     let pos = Vec2::new(app.mouse.x, app.mouse.y);
 
     match button {
-        MouseButton::Left => model.trace_origin = Some(pos),
-        MouseButton::Right => model.trace_origin = None,
+        MouseButton::Left => {
+            let (mut points, is_loop) = util::isopotential_points(
+                &model.bodies, pos,
+                5e-3, 5., 1e-3, 1000
+            );
+            
+            if is_loop { points.push(points[0]); }
+
+            model.isopotentials.push(points);
+        }
+        MouseButton::Right => {
+            model.isopotentials.clear();
+            model.field_lines.clear();
+        }
         _ => {}
     }
 }
@@ -104,51 +131,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
     
     draw.background().color(BLACK);
     
-    if let Some(trace_origin) = model.trace_origin {
-        let points = util::isopotential_points(
-            &model.bodies, trace_origin,
-            5e-3, 5., 1e-3, 1000
-        );
-        
+    for points in &model.isopotentials {
         draw.polyline()
             .points(points.iter().copied())
             .color(WHITE);
+    }
 
-        if model.field_lines {
-            let fields: Vec<f32> = points.iter()
-                                         .map(|r| model.bodies.e_field(*r).length())
-                                         .collect();
-            let flux_step = 10.;
-            let mut flux = 0.;
-            let mut field_line_origins = Vec::new();
-
-            for i in 0..points.len() {
-                let i_next = (i+1)%points.len();
-                let dist = (points[i]-points[i_next]).length();
-                let avg_field_strength = (fields[i]+fields[i_next])/2.;
-                let flux_to_next = dist*avg_field_strength;
-                
-                flux += flux_to_next;
-
-                if flux > flux_step {
-                    flux -= flux_step;
-                    let frac = 1.-flux/flux_to_next;
-
-                    field_line_origins.push(points[i].lerp(points[i_next], frac));
-                }
-            }
-            
-            for origin in field_line_origins {
-                let points = util::field_line_points(
-                    &model.bodies, origin,
-                    5e-3, 5., 1e-3, 1000
-                );
-
-                draw.polyline()
-                    .points(points.into_iter())
-                    .color(YELLOW);
-            }
-        }
+    for points in &model.field_lines {
+        draw.polyline()
+            .points(points.iter().copied())
+            .color(YELLOW);
     }
 
     for c in &model.bodies { c.draw(&draw); }
