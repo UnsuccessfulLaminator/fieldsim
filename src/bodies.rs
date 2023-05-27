@@ -129,6 +129,53 @@ impl Body for Dipole {
 
 
 
+pub struct CircleCharge {
+    pub charge: f32,
+    pub mass: f32,
+    pub radius: f32,
+    pub pos: Vec2,
+    pub vel: Vec2
+}
+
+impl Body for CircleCharge {
+    fn pos(&self) -> Vec2 {
+        self.pos
+    }
+
+    fn e_field(&self, pos: Vec2) -> Vec2 {
+        let r = pos-self.pos;
+        let r_sq = r.length_squared();
+        let r0_sq = self.radius*self.radius;
+
+        if r_sq >= r0_sq { r*self.charge/r_sq }
+        else { r*self.charge/r0_sq }
+    }
+
+    fn potential(&self, pos: Vec2) -> f32 {
+        let r = pos-self.pos;
+        let r_sq = r.length_squared();
+        let r0_sq = self.radius*self.radius;
+
+        if r_sq >= r0_sq { -self.charge*r_sq/(2.*r0_sq) }
+        else { ((r0_sq/r_sq).ln()-1.)/2. }
+    }
+
+    fn update(&mut self, e_field: Vec2, dt: f32) {
+        let dv = dt*e_field*self.charge/self.mass;
+        
+        self.pos += (self.vel+0.5*dv)*dt;
+        self.vel += dv;
+    }
+
+    fn draw(&self, draw: &Draw) {
+        let d = draw.ellipse().radius(self.radius).xy(self.pos);
+
+        if self.charge < 0. { d.rgba(0., 0., 1., 0.5); }
+        else { d.rgba(1., 0., 0., 0.5); }
+    }
+}
+
+
 
 impl<C: DerefMut<Target=[Box<dyn Body>]>> Body for C {
     fn pos(&self) -> Vec2 {
