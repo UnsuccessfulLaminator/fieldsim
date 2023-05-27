@@ -177,6 +177,29 @@ impl Body for CircleCharge {
 
 
 
+pub struct GlobalField {
+    pub field: Vec2
+}
+
+impl Body for GlobalField {
+    fn pos(&self) -> Vec2 {
+        Vec2::ZERO
+    }
+
+    fn e_field(&self, _pos: Vec2) -> Vec2 {
+        self.field
+    }
+
+    fn potential(&self, pos: Vec2) -> f32 {
+        -pos.dot(self.field)
+    }
+
+    fn update(&mut self, _e_field: Vec2, _dt: f32) {}
+    fn draw(&self, _draw: &Draw) {}
+}
+
+
+
 impl<C: DerefMut<Target=[Box<dyn Body>]>> Body for C {
     fn pos(&self) -> Vec2 {
         self.iter().fold(Vec2::ZERO, |acc, b| acc+b.pos())/self.len() as f32
