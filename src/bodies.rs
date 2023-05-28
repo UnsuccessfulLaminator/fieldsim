@@ -200,6 +200,73 @@ impl Body for GlobalField {
 
 
 
+pub struct LineCharge {
+    start: Vec2,
+    end: Vec2,
+    center: Vec2,
+    length: f32,
+    charge_density: f32,
+    rot: Mat2,
+    rot_inv: Mat2
+}
+
+impl LineCharge {
+    pub fn new(start: Vec2, end: Vec2, charge: f32) -> Self {
+        let theta = (end-start).angle();
+        let length = start.distance(end);
+
+        Self {
+            start: start,
+            end: end,
+            center: (start+end)/2.,
+            length: length,
+            charge_density: charge/length,
+            rot: Mat2::from_angle(theta),
+            rot_inv: Mat2::from_angle(-theta)
+        }
+    }
+}
+
+impl Body for LineCharge {
+    fn pos(&self) -> Vec2 {
+        (self.start+self.end)/2.
+    }
+
+    fn e_field(&self, pos: Vec2) -> Vec2 {
+        let p = self.rot_inv*(pos-self.center);
+        let (x, y) = (p[0], p[1]);
+        let d = self.length/2.;
+        let da_sq = (x+d)*(x+d)+y*y;
+        let db_sq = (x-d)*(x-d)+y*y;
+        let theta = ((d+x)/y).atan()+((d-x)/y).atan();
+        let e_field = self.charge_density*Vec2::new(-0.5*(db_sq/da_sq).ln(), theta);
+
+        self.rot*e_field
+    }
+
+    fn potential(&self, pos: Vec2) -> f32 {
+        let p = self.rot_inv*(pos-self.center);
+        let (x, y) = (p[0], p[1]);
+        let d = self.length/2.;
+        let da_sq = (x+d)*(x+d)+y*y;
+        let db_sq = (x-d)*(x-d)+y*y;
+        let theta = ((d+x)/y).atan()+((d-x)/y).atan();
+
+        0.5*self.charge_density*(db_sq.ln()*(x-d)-da_sq.ln()*(x+d)-2.*y*theta+4.*d)
+    }
+
+    fn update(&mut self, _e_field: Vec2, _dt: f32) {}
+    
+    fn draw(&self, draw: &Draw) {
+        draw.line()
+            .start(self.start)
+            .end(self.end)
+            .color(if self.charge_density < 0. { BLUE } else { RED });
+    }
+}
+
+
+
 impl<C: DerefMut<Target=[Box<dyn Body>]>> Body for C {
     fn pos(&self) -> Vec2 {
         self.iter().fold(Vec2::ZERO, |acc, b| acc+b.pos())/self.len() as f32
