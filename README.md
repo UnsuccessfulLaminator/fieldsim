@@ -1,16 +1,19 @@
 # Fieldsim
 
 <p align="center">
-<img src="images/field1.png" width="34.7%"> <img src="images/field2.png" width="26.7%"> <img src="images/field3.png" width="28.6%">
+<img src="images/field3.png" width="28%"> <img src="images/field4.png" width="26.1%"> <img src="images/field5.png" width="35.9%">
 </p>
 
 A graphical simulator for electric bodies in a 2D universe, made for plotting isopotentials and field lines.
 
 ## Functionality
 
-Currently there are only 2 electric bodies available:
+Currently there are 5 electric bodies available:
 1. Point charge
 2. Dipole
+3. Global field
+4. Circular charge (circle of constant charge density)
+5. Line charge (line segment of constant linear charge density)
 
 The potential and electric field these generate are of slightly different form to the usual expressions in 3D. In order for Gauss's Law to hold for 2D closed contours, the electric field of a point charge must drop off as 1/r rather than 1/r². Likewise the potential must go as ln(r) rather than 1/r. Everything else follows as expected.
 
