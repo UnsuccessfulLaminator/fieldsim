@@ -21,15 +21,15 @@ The program plots isopotentials and field lines using a simple adaptive RK4 algo
 
 The program also has rudimentary simulation capabilities, allowing bodies to interact with eachother and move about.
 
-All graphics are plotted using [nannou](https://nannou.cc/).
+All graphics are plotted using [nannou](https://nannou.cc/) and the GUI is done with nannou\_egui, an interface to [egui](https://github.com/emilk/egui).
 
 ## Interface
 
-As it stands, the user interface is somewhere between bare and non-existent, depending on how generous you are. The controls are as follows:
-* Left click to plot an isopotential
-* Right click to clear all isopotentials and field lines
-* Press F to plot field lines from all placed isopotentials (painfully slow for more than about 10 isopotentials simultaneously)
-* Press Space to toggle the simulation
+As it stands, the user interface is incomplete. There is a small GUI with 3 buttons:
+* Add isopotential - Press this and then click anywhere to start an isopotential at that point
+* Draw field lines - Draw the field lines from all placed isopotentials
+* Clear lines - Delete all isopotentials and field lines
+Additionally the simulation is toggled with Space.
 
 ## Building
 
