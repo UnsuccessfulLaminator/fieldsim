@@ -1,12 +1,12 @@
 mod bodies;
 mod util;
+mod body_ui;
 
 use nannou::prelude::*;
 use nannou::winit;
 use nannou_egui::{egui, Egui};
-use rand::Rng;
-use std::time::Duration;
 use bodies::*;
+use body_ui::*;
 
 
 
@@ -17,11 +17,11 @@ fn main() {
            .run();
 }
 
-#[derive(PartialEq)]
 enum State {
     Simulating,
     ShowGui,
-    AddIsopotential
+    AddIsopotential,
+    AddBody(Box<dyn UiConstructor<Box<dyn Body>>>)
 }
 
 struct Model {
@@ -76,7 +76,7 @@ fn model(app: &App) -> Model {
 }
 
 fn raw_window_event(_app: &App, model: &mut Model, event: &winit::event::WindowEvent) {
-    if model.state == State::ShowGui {
+    if matches!(model.state, State::ShowGui | State::AddBody(_)) {
         model.egui.handle_raw_event(event);
     }
 }
@@ -99,7 +99,7 @@ fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
 
     match button {
         MouseButton::Left => {
-            if model.state == State::AddIsopotential {
+            if matches!(model.state, State::AddIsopotential) {
                 let (mut points, is_loop) = util::isopotential_points(
                     &model.bodies, pos,
                     5e-3, 5., 1e-3, 1000
@@ -115,12 +115,10 @@ fn mouse_pressed(app: &App, model: &mut Model, button: MouseButton) {
     }
 }
 
-fn make_ui(model: &mut Model, elapsed: Duration) {
-    model.egui.set_elapsed_time(elapsed);
-
+fn make_ui(model: &mut Model) {
     let ctx = model.egui.begin_frame();
 
-    egui::Window::new("Bodies").show(&ctx, |ui| {
+    egui::Window::new("Menu").show(&ctx, |ui| {
         if ui.button("Add isopotential").clicked() {
             model.state = State::AddIsopotential;
         }
@@ -146,6 +144,15 @@ fn make_ui(model: &mut Model, elapsed: Duration) {
             model.isopotentials.clear();
             model.field_lines.clear();
         }
+
+        if ui.button("Add point charge").clicked() {
+            model.state = State::AddBody(Box::new(PointCharge {
+                charge: 0.,
+                mass: 0.,
+                pos: Vec2::ZERO,
+                vel: Vec2::ZERO
+            }));
+        }
     });
 }
 
@@ -163,11 +170,28 @@ fn simulate(model: &mut Model, dt: f32) {
 }
 
 fn update(_app: &App, model: &mut Model, update: Update) {
-    make_ui(model, update.since_start);
+    model.egui.set_elapsed_time(update.since_start);
 
-    if model.state == State::Simulating {
-        simulate(model, update.since_last.as_secs_f32());
+    let dt = update.since_last.as_secs_f32();
+    let mut next_state = None;
+
+    match model.state {
+        State::Simulating => simulate(model, dt),
+        State::ShowGui => make_ui(model),
+        State::AddBody(ref mut b) => {
+            let ctx = model.egui.begin_frame();
+            
+            egui::Window::new("Add").show(&ctx, |ui| {
+                if b.make_ui(ui) {
+                    next_state = Some(State::ShowGui);
+                    model.bodies.push(b.get_value());
+                }
+            });
+        }
+        _ => {}
     }
+
+    if let Some(s) = next_state { model.state = s; }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -193,13 +217,18 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.text(match model.state {
             State::Simulating => "Running",
             State::ShowGui => "Paused",
-            State::AddIsopotential => "Adding isopotential"
+            State::AddIsopotential => "Adding isopotential",
+            State::AddBody(_) => "Adding body"
         })
         .x_y((screen.left()+screen.right())/2., screen.top()-10.);
+    
+    if let State::AddBody(ref b) = model.state {
+        b.get_value().draw(&draw);
+    }
 
     draw.to_frame(app, &frame).unwrap();
     
-    if model.state == State::ShowGui {
+    if matches!(model.state, State::ShowGui | State::AddBody(_)) {
         model.egui.draw_to_frame(&frame).unwrap();
     }
 }
