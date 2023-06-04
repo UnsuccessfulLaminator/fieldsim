@@ -2,6 +2,7 @@ mod bodies;
 mod util;
 mod body_ui;
 
+use std::collections::HashMap;
 use nannou::prelude::*;
 use nannou::winit;
 use nannou_egui::{egui, Egui};
@@ -21,7 +22,7 @@ enum State {
     Simulating,
     ShowGui,
     AddIsopotential,
-    AddBody(Box<dyn UiConstructor<Box<dyn Body>>>)
+    AddBody(String)
 }
 
 struct Model {
@@ -29,6 +30,7 @@ struct Model {
     bodies: Vec<Box<dyn Body>>,
     isopotentials: Vec<Vec<Vec2>>,
     field_lines: Vec<Vec<Vec2>>,
+    constructors: HashMap<String, Box<dyn UiConstructor<Box<dyn Body>>>>,
     egui: Egui
 }
 
@@ -43,14 +45,18 @@ fn model(app: &App) -> Model {
     
     let window = app.window(window_id).unwrap();
     let screen = app.window_rect();
-    let mut rng = rand::thread_rng();
     let mut model = Model {
         state: State::ShowGui,
         bodies: Vec::new(),
         isopotentials: Vec::new(),
         field_lines: Vec::new(),
+        constructors: HashMap::new(),
         egui: Egui::from_window(&window)
     };
+    
+    model.constructors.insert(
+        "Point charge".to_string(), Box::new(PointChargeConstructor::default())
+    );
 
     model.bodies.push(Box::new(LineCharge::new(
         Vec2::new(-100., 0.), Vec2::new(100., 0.), -100.
@@ -144,15 +150,22 @@ fn make_ui(model: &mut Model) {
             model.isopotentials.clear();
             model.field_lines.clear();
         }
+        
+        ui.horizontal(|ui| {
+            let mut selected = model.constructors.keys().nth(0).unwrap();
 
-        if ui.button("Add point charge").clicked() {
-            model.state = State::AddBody(Box::new(PointCharge {
-                charge: 0.,
-                mass: 0.,
-                pos: Vec2::ZERO,
-                vel: Vec2::ZERO
-            }));
-        }
+            egui::ComboBox::from_label("Body...")
+                           .selected_text(selected)
+                           .show_ui(ui, |ui| {
+                               for key in model.constructors.keys() {
+                                   ui.selectable_value(&mut selected, key, key);
+                               }
+                           });
+
+            if ui.button("Add").clicked() {
+                model.state = State::AddBody(selected.to_string());
+            }
+        });
     });
 }
 
@@ -178,7 +191,8 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     match model.state {
         State::Simulating => simulate(model, dt),
         State::ShowGui => make_ui(model),
-        State::AddBody(ref mut b) => {
+        State::AddBody(ref name) => {
+            let b = model.constructors.get_mut(name).unwrap();
             let ctx = model.egui.begin_frame();
             
             egui::Window::new("Add").show(&ctx, |ui| {
@@ -223,7 +237,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         .x_y((screen.left()+screen.right())/2., screen.top()-10.);
     
     if let State::AddBody(ref b) = model.state {
-        b.get_value().draw(&draw);
+        model.constructors[b].get_value().draw(&draw);
     }
 
     draw.to_frame(app, &frame).unwrap();
