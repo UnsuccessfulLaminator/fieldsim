@@ -33,7 +33,7 @@ As it stands, the user interface is incomplete. There is a small GUI with 4 butt
 Additionally the simulation is toggled with Space.
 
 <p align="center">
-<img src="images/menu.png" width="20%"> <img src="images/add_menu.png">
+<img src="images/menu.png" width="38.4%"> <img src="images/add_menu.png" width="31.6%">
 </p>
 
 ## Building
