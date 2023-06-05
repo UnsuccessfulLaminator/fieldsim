@@ -31,6 +31,7 @@ struct Model {
     isopotentials: Vec<Vec<Vec2>>,
     field_lines: Vec<Vec<Vec2>>,
     constructors: HashMap<String, Box<dyn UiConstructor<Box<dyn Body>>>>,
+    selected_constructor: String,
     egui: Egui
 }
 
@@ -51,12 +52,27 @@ fn model(app: &App) -> Model {
         isopotentials: Vec::new(),
         field_lines: Vec::new(),
         constructors: HashMap::new(),
+        selected_constructor: String::new(),
         egui: Egui::from_window(&window)
     };
     
     model.constructors.insert(
         "Point charge".to_string(), Box::new(PointChargeConstructor::default())
     );
+
+    model.constructors.insert(
+        "Dipole".to_string(), Box::new(DipoleConstructor::default())
+    );
+    
+    model.constructors.insert(
+        "Circle charge".to_string(), Box::new(CircleChargeConstructor::default())
+    );
+    
+    model.constructors.insert(
+        "Global field".to_string(), Box::new(GlobalFieldConstructor::default())
+    );
+
+    model.selected_constructor = model.constructors.keys().nth(0).unwrap().clone();
 
     model.bodies.push(Box::new(LineCharge::new(
         Vec2::new(-100., 0.), Vec2::new(100., 0.), -100.
@@ -152,18 +168,19 @@ fn make_ui(model: &mut Model) {
         }
         
         ui.horizontal(|ui| {
-            let mut selected = model.constructors.keys().nth(0).unwrap();
+            let selected = &mut model.selected_constructor;
 
-            egui::ComboBox::from_label("Body...")
-                           .selected_text(selected)
-                           .show_ui(ui, |ui| {
-                               for key in model.constructors.keys() {
-                                   ui.selectable_value(&mut selected, key, key);
-                               }
-                           });
+            egui::ComboBox::from_label("")
+                .selected_text(selected.clone())
+                .show_ui(ui, |ui| {
+                    for key in model.constructors.keys() {
+                        ui.selectable_value(selected, key.to_string(), key.to_string());
+                    }
+                });
 
             if ui.button("Add").clicked() {
-                model.state = State::AddBody(selected.to_string());
+                model.state = State::AddBody(selected.clone());
+                model.constructors.get_mut(selected).unwrap().reset();
             }
         });
     });

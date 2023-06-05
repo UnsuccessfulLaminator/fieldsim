@@ -14,6 +14,7 @@ pub trait Body {
 
 
 
+#[derive(Clone)]
 pub struct PointCharge {
     pub charge: f32,
     pub mass: f32,
@@ -76,18 +77,20 @@ pub struct Dipole {
 }
 
 impl Dipole {
-    pub fn new(dipole: f32, mass: f32, pos: Vec2, vel: Vec2) -> Dipole {
+    pub fn new(dipole: f32, mass: f32, angle: f32, pos: Vec2, vel: Vec2) -> Dipole {
+        let direction = Vec2::new(angle.cos(), angle.sin());
+
         Dipole {
             q1: PointCharge {
                 charge: dipole,
                 mass: mass/2.,
-                pos: pos+Vec2::new(0.5, 0.),
+                pos: pos+0.5*direction,
                 vel: vel
             },
             q2: PointCharge {
                 charge: -dipole,
                 mass: mass/2.,
-                pos: pos-Vec2::new(0.5, 0.),
+                pos: pos-0.5*direction,
                 vel: vel
             },
             pos: pos
@@ -261,7 +264,8 @@ impl Body for LineCharge {
         draw.line()
             .start(self.start)
             .end(self.end)
-            .color(if self.charge_density < 0. { BLUE } else { RED });
+            .color(if self.charge_density < 0. { BLUE } else { RED })
+            .stroke_weight(2.);
     }
 }
 
