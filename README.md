@@ -25,11 +25,16 @@ All graphics are plotted using [nannou](https://nannou.cc/) and the GUI is done 
 
 ## Interface
 
-As it stands, the user interface is incomplete. There is a small GUI with 3 buttons:
+As it stands, the user interface is incomplete. There is a small GUI with 4 buttons:
 * Add isopotential - Press this and then click anywhere to start an isopotential at that point
 * Draw field lines - Draw the field lines from all placed isopotentials
 * Clear lines - Delete all isopotentials and field lines
+* Add - Add the selected type of body
 Additionally the simulation is toggled with Space.
+
+<p align="center">
+<img src="images/menu.png" width="20%"> <img src="images/add_menu.png">
+</p>
 
 ## Building
 
